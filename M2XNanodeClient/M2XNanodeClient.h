@@ -34,6 +34,10 @@ typedef void (*location_read_callback)(const char* name,
 typedef void (*put_data_fill_callback)(Print* print);
 typedef void (*post_data_fill_callback)(Print* print, int index);
 
+// Returned value is the number of values in current stream
+typedef int (*post_multiple_stream_fill_callback)(Print* print, int streamIndex);
+typedef void (*post_multiple_data_fill_callback)(Print* print, int valueIndex, int streamIndex);
+
 const int kDefaultM2XPort PROGMEM = 80;
 
 class M2XNanodeClient {
@@ -54,6 +58,14 @@ public:
   int post(const char* feedId, const char* streamName, int valueNumber,
            post_data_fill_callback timestamp_cb,
            post_data_fill_callback data_cb);
+
+  // Push multiple data values to multiple streams using POST request,
+  // returns HTTP status code
+  // NOTE: timestamp is also required here
+  int postMultiple(const char* feedId, int streamNumber,
+                   post_multiple_stream_fill_callback stream_cb,
+                   post_multiple_data_fill_callback timestamp_cb,
+                   post_multiple_data_fill_callback data_cb);
 
   // WARNING: The functions below this line are not considered APIs, they
   // are made public only to ensure callback functions can call them. Make

@@ -34,9 +34,13 @@ static put_data_fill_callback s_put_cb;
 static int s_fd;
 static int s_response_code;
 
-static int s_value_number;
+static int s_number;
 static post_data_fill_callback s_post_timestamp_cb;
 static post_data_fill_callback s_post_data_cb;
+
+static post_multiple_stream_fill_callback s_post_multiple_stream_cb;
+static post_multiple_data_fill_callback s_post_multiple_timestamp_cb;
+static post_multiple_data_fill_callback s_post_multiple_data_cb;
 
 static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
@@ -80,6 +84,29 @@ static void print_post_values(Print* print, int valueNumber,
   print->print("]}");
 }
 
+static void print_post_multiple_values(Print* print, int streamNumber,
+                                       post_multiple_stream_fill_callback stream_cb,
+                                       post_multiple_data_fill_callback timestamp_cb,
+                                       post_multiple_data_fill_callback data_cb) {
+  int si, vi, valueNumber;
+  print->print("{\"values\":{");
+  for (si = 0; si < valueNumber; si++) {
+    valueNumber = stream_cb(print, si);
+    print->print(":[");
+    for (vi = 0; vi < valueNumber; vi++) {
+      print->print("{\"at\":");
+      timestamp_cb(print, vi, si);
+      print->print(",\"value\":");
+      data_cb(print, vi, si);
+      print->print("}");
+      if (vi != valueNumber - 1) { print->print(","); }
+    }
+    print->print("]");
+    if (si != valueNumber - 1) { print->print(","); }
+  }
+  print->print("}}");
+}
+
 static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
   NullPrint nullPrint;
@@ -92,10 +119,32 @@ static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
     bfill.println(F("/values HTTP/1.0"));
 
     nullPrint.count = 0;
-    print_post_values(&nullPrint, s_value_number, s_post_timestamp_cb, s_post_data_cb);
+    print_post_values(&nullPrint, s_number, s_post_timestamp_cb, s_post_data_cb);
     s_client->writeHttpHeader(&bfill, nullPrint.count);
 
-    print_post_values(&bfill, s_value_number, s_post_timestamp_cb, s_post_data_cb);
+    print_post_values(&bfill, s_number, s_post_timestamp_cb, s_post_data_cb);
+  }
+  return bfill.position();
+}
+
+static uint16_t post_multiple_client_internal_datafill_cb(uint8_t fd) {
+  BufferFiller bfill = EtherCard::tcpOffset();
+  NullPrint nullPrint;
+
+  if (fd == s_fd) {
+    bfill.print(F("POST /v1/feeds/"));
+    print_encoded_string(&bfill, s_feed_id);
+    bfill.println(F(" HTTP/1.0"));
+
+    nullPrint.count = 0;
+    print_post_multiple_values(&nullPrint, s_number, s_post_multiple_stream_cb,
+                               s_post_multiple_timestamp_cb,
+                               s_post_multiple_data_cb);
+    s_client->writeHttpHeader(&bfill, nullPrint.count);
+
+    print_post_multiple_values(&bfill, s_number, s_post_multiple_stream_cb,
+                               s_post_multiple_timestamp_cb,
+                               s_post_multiple_data_cb);
   }
   return bfill.position();
 }
@@ -139,7 +188,7 @@ int M2XNanodeClient::post(const char* feedId, const char* streamName, int valueN
   s_client = this;
   s_feed_id = feedId;
   s_stream_name = streamName;
-  s_value_number = valueNumber;
+  s_number = valueNumber;
   s_post_timestamp_cb = timestamp_cb;
   s_post_data_cb = data_cb;
   s_response_code = 0;
@@ -148,6 +197,29 @@ int M2XNanodeClient::post(const char* feedId, const char* streamName, int valueN
                             _port);
   return loop();
 }
+
+int M2XNanodeClient::postMultiple(const char* feedId, int streamNumber,
+                                  post_multiple_stream_fill_callback stream_cb,
+                                  post_multiple_data_fill_callback timestamp_cb,
+                                  post_multiple_data_fill_callback data_cb) {
+  int i;
+  ether.packetLoop(ether.packetReceive());
+  for (i = 0; i < 4; i++) {
+    ether.hisip[i] = (*_addr)[i];
+  }
+  s_client = this;
+  s_feed_id = feedId;
+  s_number = streamNumber;
+  s_post_multiple_stream_cb = stream_cb;
+  s_post_multiple_timestamp_cb = timestamp_cb;
+  s_post_multiple_data_cb = data_cb;
+  s_response_code = 0;
+  s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
+                            post_multiple_client_internal_datafill_cb,
+                            _port);
+  return loop();
+}
+
 
 // Encodes and prints string using Percent-encoding specified
 // in RFC 1738, Section 2.2
