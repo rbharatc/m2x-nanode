@@ -32,6 +32,7 @@ typedef void (*location_read_callback)(const char* name,
                                        int index,
                                        void* context);
 typedef void (*put_data_fill_callback)(Print* print);
+typedef void (*post_data_fill_callback)(Print* print, int index);
 
 const int kDefaultM2XPort PROGMEM = 80;
 
@@ -43,9 +44,16 @@ public:
                   int case_insensitive = 1,
                   int port = kDefaultM2XPort);
 
-  // Post data stream value, returns the HTTP status code
+  // Push data stream value using PUT request, returns the HTTP status code
   int put(const char* feedId, const char* streamName,
           put_data_fill_callback cb);
+
+  // Push multiple data stream values using POST request, returns the
+  // HTTP status code
+  // NOTE: timestamp is required in this function
+  int post(const char* feedId, const char* streamName, int valueNumber,
+           post_data_fill_callback timestamp_cb,
+           post_data_fill_callback data_cb);
 
   // WARNING: The functions below this line are not considered APIs, they
   // are made public only to ensure callback functions can call them. Make
@@ -68,6 +76,11 @@ private:
   // once the pattern is found. In the pattern, you can use '*' to denote
   // any character
   int waitForString(const char* origin, int len, const char* str);
+
+  // Run network loop till one of the following conditions is met:
+  // 1. A response code is obtained;
+  // 2. The request has time out.
+  int loop();
 };
 
 #endif  /* M2XNanodeClient_h */

@@ -34,6 +34,10 @@ static put_data_fill_callback s_put_cb;
 static int s_fd;
 static int s_response_code;
 
+static int s_value_number;
+static post_data_fill_callback s_post_timestamp_cb;
+static post_data_fill_callback s_post_data_cb;
+
 static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
   NullPrint nullPrint;
@@ -58,7 +62,45 @@ static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
   return bfill.position();
 }
 
-static uint8_t put_client_internal_result_cb(uint8_t fd, uint8_t statuscode, uint16_t datapos, uint16_t len_of_data) {
+static void print_post_values(Print* print, int valueNumber,
+                              post_data_fill_callback timestamp_cb,
+                              post_data_fill_callback data_cb) {
+  int i;
+  print->print("{\"values\":[");
+  for (i = 0; i < valueNumber; i++) {
+    print->print("{\"at\":");
+    timestamp_cb(print, i);
+    print->print(",\"value\":");
+    data_cb(print, i);
+    print->print("}");
+    if (i != valueNumber - 1) {
+      print->print(",");
+    }
+  }
+  print->print("]}");
+}
+
+static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
+  BufferFiller bfill = EtherCard::tcpOffset();
+  NullPrint nullPrint;
+
+  if (fd == s_fd) {
+    bfill.print(F("POST /v1/feeds/"));
+    print_encoded_string(&bfill, s_feed_id);
+    bfill.print(F("/streams/"));
+    print_encoded_string(&bfill, s_stream_name);
+    bfill.println(F("/values HTTP/1.0"));
+
+    nullPrint.count = 0;
+    print_post_values(&nullPrint, s_value_number, s_post_timestamp_cb, s_post_data_cb);
+    s_client->writeHttpHeader(&bfill, nullPrint.count);
+
+    print_post_values(&bfill, s_value_number, s_post_timestamp_cb, s_post_data_cb);
+  }
+  return bfill.position();
+}
+
+static uint8_t client_internal_fetch_response_code_cb(uint8_t fd, uint8_t statuscode, uint16_t datapos, uint16_t len_of_data) {
   if (fd == s_fd) {
     if (statuscode == 0) {
       s_response_code = s_client->readStatusCode((char*) ether.buffer + datapos, len_of_data);
@@ -80,20 +122,31 @@ int M2XNanodeClient::put(const char* feedId, const char* streamName,
   s_stream_name = streamName;
   s_put_cb = cb;
   s_response_code = 0;
-  s_fd = ether.clientTcpReq(put_client_internal_result_cb,
+  s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
                             put_client_internal_datafill_cb,
                             _port);
-  for (i = 0; i < _timeout_seconds * 10; i++) {
-    ether.packetLoop(ether.packetReceive());
-    if (s_response_code != 0) {
-      // Request already processed
-      return s_response_code;
-    }
-    // Here we just use an approximation, since millis() has
-    // overflow problem
-    delay(100);
+  return loop();
+}
+
+int M2XNanodeClient::post(const char* feedId, const char* streamName, int valueNumber,
+                          post_data_fill_callback timestamp_cb,
+                          post_data_fill_callback data_cb) {
+  int i;
+  ether.packetLoop(ether.packetReceive());
+  for (i = 0; i < 4; i++) {
+    ether.hisip[i] = (*_addr)[i];
   }
-  return E_TIMEOUT;
+  s_client = this;
+  s_feed_id = feedId;
+  s_stream_name = streamName;
+  s_value_number = valueNumber;
+  s_post_timestamp_cb = timestamp_cb;
+  s_post_data_cb = data_cb;
+  s_response_code = 0;
+  s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
+                            post_client_internal_datafill_cb,
+                            _port);
+  return loop();
 }
 
 // Encodes and prints string using Percent-encoding specified
@@ -168,4 +221,19 @@ int M2XNanodeClient::readStatusCode(const char* origin, int len) {
     responseCode = responseCode * 10 + (origin[ret + i] - '0');
   }
   return responseCode;
+}
+
+int M2XNanodeClient::loop() {
+  int i;
+  for (i = 0; i < _timeout_seconds * 10; i++) {
+    ether.packetLoop(ether.packetReceive());
+    if (s_response_code != 0) {
+      // Request already processed
+      return s_response_code;
+    }
+    // Here we just use an approximation, since millis() has
+    // overflow problem
+    delay(100);
+  }
+  return E_TIMEOUT;
 }
