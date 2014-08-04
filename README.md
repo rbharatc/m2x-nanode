@@ -13,4 +13,145 @@ This client provides an easy to use interface for [Nanode](http://www.nanode.eu)
 Please consult the [M2X glossary](https://m2x.att.com/developer/documentation/glossary) if you have questions about any M2X specific terms.
 
 
-## Coming soon...
+## How to Use the Library ##
+
+1. Clone [ethercard](https://github.com/xxuejie/ethercard) library:
+
+    $ git clone https://github.com/xxuejie/ethercard
+
+2. Open the Arduino IDE, click `Sketch`->`Import Library...`->`Add Library...`, navigate and select the ethercard repo folder, click `OK` to import the libray into Arduino.
+
+3. Clone [m2x-nanode](https://github.com/attm2x/m2x-nanode) library:
+
+    $ git clone https://github.com/attm2x/m2x-nanode
+
+4. Use the same way as Step #2 to import `M2XNanodeClient` in this repo. Note while in Step #2, we are selecting the repo folder `ethercard`, in this step we are selecting a sub-directory of the repo.
+
+5. Open one of the Nanode examples in `File`->`Examples`->`M2XNanodeClient`.
+
+6. Change `Feed ID`, `Stream Name` and `M2X Key` fields to contain correct value.
+
+7. Then you can run the examples!
+
+**NOTE**: For simplicity, all of provided examples use fixed values as inputs. If you want to use values obtained from real sensors as inputs, please refer to [this tutorial](http://shop.wickeddevice.com/2013/10/16/nanode-gatewayremote-sensing-tutorial-1/) for the value gathering part.
+
+## Client API ##
+
+Due to the memory limitation of Nanode board, most of the APIs provided work in a callback-based way:
+
+1. You define one or more function(s) to provide the data needed.
+
+2. You pass the function(s) as parameter(s) to API calls.
+
+3. The library will invoke provided function(s) as callbacks to fill in necessary data.
+
+For more details on how this works, please refer to the examples.
+
+### PUT API ###
+
+PUT API is the simpliest one to push data to M2X. The API interface is as follows:
+
+```
+typedef void (*put_data_fill_callback)(Print* print);
+int put(const char* feed_id, const char* stream_name,
+          put_data_fill_callback cb);
+```
+
+A sample callback function can look like the following:
+
+```
+static int val = 11;
+void fill_data_cb(Print* print) {
+  print->print(val);
+}
+```
+
+Notice if you want to pass strings as values, you need to include the double-quotes:
+
+```
+void fill_data_cb(Print* print) {
+  print->print("\"11\"");
+}
+```
+
+### POST API ###
+
+POST API has the following 2 differences from PUT API:
+
+1. You can push multiple values in one request;
+2. For each value, you also need to provide an ISO8601-formatted timestamp.
+
+The calling interface for this API is as follows:
+
+```
+typedef void (*post_data_fill_callback)(Print* print, int index);
+int post(const char* feed_id, const char* stream_name, int value_number,
+           post_data_fill_callback timestamp_cb,
+           post_data_fill_callback data_cb);
+```
+
+Notice here we use 2 callback functions: one for timestamp, and one for data. For each callback function, the client library will invoke it `value_number` times, each time for a different value to be pushed.
+
+Notice for timestamp and string-typed value, double quotes are needed:
+
+```
+static int seconds = 10;
+void fill_timestamp_cb(Print* print, int index) {
+  print->print("\"2014-07-09T19:");
+  print->print(15 + index);
+  print->print(":");
+  print->print(seconds);
+  print->print(".624Z\"");
+}
+```
+
+### POST Multiple API ###
+
+POST Multiple API has one more advantage over POST API: it allows pushing multiple values to multiple streams in one request. As a result, the calling interface for this API is further complicated:
+
+```
+typedef int (*post_multiple_stream_fill_callback)(Print* print, int stream_index);
+typedef void (*post_multiple_data_fill_callback)(Print* print, int value_index, int stream_index);
+int postMultiple(const char* feed_id, int stream_number,
+                 post_multiple_stream_fill_callback stream_cb,
+                 post_multiple_data_fill_callback timestamp_cb,
+                 post_multiple_data_fill_callback data_cb);
+```
+
+First, `stream_number` denotes how many streams we are pushing to. For each stream, `stream_cb` will be called with the corresponding index, this callback function has 2 effects:
+
+1. It prints the stream name into `print`(double quotes needed);
+2. It returns the number of values we want to push for this stream.
+
+Suppose during the `i`th time we call `stream_cb`, `j` is returned as a result. Then we will call `timestamp_cb` callback function `j` times, with `i` as `stream_index`, and `0` through `j-1` as `value_index`, each time, we are getting the timestamp for the value to push.
+
+We are also calling `data_cb` the same times with the same input parameter to get the value to push.
+
+Notice for all callback functions, if string values are printed, double quotes are needed.
+
+### Update Location API ###
+
+Update Location API can be used to update the location of datasource. The calling interface is as follows:
+
+```
+// Values of data type:
+// 1 - Latitude
+// 2 - Longitude
+// 3 - Name
+// 4 - Elevation
+typedef void (*update_location_data_fill_callback)(Print* print, int data_type);
+int updateLocation(const char* feed_id, int has_name, int has_elevation,
+                   update_location_data_fill_callback cb);
+```
+
+In this API request, `name` and `elevation` are optional values. `has_name` and `has_elevation` thus determine if `name` and `elevation` are present respectively: 1 for present, 0 for absence.
+
+Depending on the values `has_name` and `has_elevation`, the callback function will be called 2 - 4 times. Each time, a different `data_type` value is used, so we can know which value is requested right now.
+
+Like all the requests above, if string-typed values are printed, double quotes are needed to be printed as well.
+
+## Known Issues ##
+
+* In our tests, we found that there is a small chance that an API request may timeout. This happens inside the ethercard library: our internal callback functions are not called at all. We suspect that this may be related to the way TCP/IP is implemented in the library, or our way of using the library(we might accidently set the wrong parameter for some option?)
+
+* Unlike the Arduino client library, fetching values is not supported at all. This is because [ethercard](https://github.com/xxuejie/ethercard) does not support packet streaming: when a packet arrives, ethercard will read all the data into memory before handling over control to our code. Considering the facts that Nanode only have 2kb memory, and that a simple M2X List Value API response contains 4k-5k data. We can never process this request on Nanode successfully.
