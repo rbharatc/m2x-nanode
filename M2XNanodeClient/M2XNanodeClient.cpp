@@ -1,10 +1,6 @@
 #include "M2XNanodeClient.h"
 
-#include <jsonlite.h>
 #include <EtherCard.h>
-
-#include "StreamParseFunctions.h"
-#include "LocationParseFunctions.h"
 
 int print_encoded_string(Print* print, const char* str);
 int tolower(int ch)

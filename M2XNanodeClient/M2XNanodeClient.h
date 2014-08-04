@@ -15,9 +15,8 @@
 const int E_OK = 0;
 const int E_DISCONNECTED = -1;
 const int E_INVALID = -2;
-const int E_JSON_INVALID = -3;
-const int E_TIMEOUT = -4;
-const int E_NOMATCH = -5;
+const int E_TIMEOUT = -3;
+const int E_NOMATCH = -4;
 
 typedef void (*stream_value_read_callback)(const char* at,
                                            const char* value,

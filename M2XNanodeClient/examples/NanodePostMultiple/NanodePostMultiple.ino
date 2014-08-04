@@ -1,4 +1,3 @@
-#include <jsonlite.h>
 #include <EtherCard.h>
 
 #include "M2XNanodeClient.h"
