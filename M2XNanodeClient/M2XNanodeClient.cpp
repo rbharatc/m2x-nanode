@@ -48,7 +48,7 @@ static update_location_data_fill_callback s_update_location_data_cb;
 
 static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
-  NullPrint nullPrint;
+  NullPrint null_print;
 
   if (fd == s_fd) {
     bfill.print(F("PUT /v1/feeds/"));
@@ -57,11 +57,11 @@ static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
     print_encoded_string(&bfill, s_stream_name);
     bfill.println(F(" HTTP/1.0"));
 
-    nullPrint.count = 0;
-    s_put_cb(&nullPrint);
+    null_print.count = 0;
+    s_put_cb(&null_print);
     // 10 for {"value": and }
-    int contentLength = nullPrint.count + 10;
-    s_client->writeHttpHeader(&bfill, contentLength);
+    int content_length = null_print.count + 10;
+    s_client->writeHttpHeader(&bfill, content_length);
 
     bfill.print(F("{\"value\":"));
     s_put_cb(&bfill);
@@ -70,43 +70,43 @@ static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
   return bfill.position();
 }
 
-static void print_post_values(Print* print, int valueNumber,
+static void print_post_values(Print* print, int value_number,
                               post_data_fill_callback timestamp_cb,
                               post_data_fill_callback data_cb) {
   int i;
   print->print("{\"values\":[");
-  for (i = 0; i < valueNumber; i++) {
+  for (i = 0; i < value_number; i++) {
     print->print("{\"at\":");
     timestamp_cb(print, i);
     print->print(",\"value\":");
     data_cb(print, i);
     print->print("}");
-    if (i != valueNumber - 1) {
+    if (i != value_number - 1) {
       print->print(",");
     }
   }
   print->print("]}");
 }
 
-static void print_post_multiple_values(Print* print, int streamNumber,
+static void print_post_multiple_values(Print* print, int stream_number,
                                        post_multiple_stream_fill_callback stream_cb,
                                        post_multiple_data_fill_callback timestamp_cb,
                                        post_multiple_data_fill_callback data_cb) {
-  int si, vi, valueNumber;
+  int si, vi, value_number;
   print->print("{\"values\":{");
-  for (si = 0; si < valueNumber; si++) {
-    valueNumber = stream_cb(print, si);
+  for (si = 0; si < value_number; si++) {
+    value_number = stream_cb(print, si);
     print->print(":[");
-    for (vi = 0; vi < valueNumber; vi++) {
+    for (vi = 0; vi < value_number; vi++) {
       print->print("{\"at\":");
       timestamp_cb(print, vi, si);
       print->print(",\"value\":");
       data_cb(print, vi, si);
       print->print("}");
-      if (vi != valueNumber - 1) { print->print(","); }
+      if (vi != value_number - 1) { print->print(","); }
     }
     print->print("]");
-    if (si != valueNumber - 1) { print->print(","); }
+    if (si != value_number - 1) { print->print(","); }
   }
   print->print("}}");
 }
@@ -133,7 +133,7 @@ static void print_location(Print* print, int has_name, int has_elevation,
 
 static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
-  NullPrint nullPrint;
+  NullPrint null_print;
 
   if (fd == s_fd) {
     bfill.print(F("POST /v1/feeds/"));
@@ -142,9 +142,9 @@ static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
     print_encoded_string(&bfill, s_stream_name);
     bfill.println(F("/values HTTP/1.0"));
 
-    nullPrint.count = 0;
-    print_post_values(&nullPrint, s_number, s_post_timestamp_cb, s_post_data_cb);
-    s_client->writeHttpHeader(&bfill, nullPrint.count);
+    null_print.count = 0;
+    print_post_values(&null_print, s_number, s_post_timestamp_cb, s_post_data_cb);
+    s_client->writeHttpHeader(&bfill, null_print.count);
 
     print_post_values(&bfill, s_number, s_post_timestamp_cb, s_post_data_cb);
   }
@@ -153,18 +153,18 @@ static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
 
 static uint16_t post_multiple_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
-  NullPrint nullPrint;
+  NullPrint null_print;
 
   if (fd == s_fd) {
     bfill.print(F("POST /v1/feeds/"));
     print_encoded_string(&bfill, s_feed_id);
     bfill.println(F(" HTTP/1.0"));
 
-    nullPrint.count = 0;
-    print_post_multiple_values(&nullPrint, s_number, s_post_multiple_stream_cb,
+    null_print.count = 0;
+    print_post_multiple_values(&null_print, s_number, s_post_multiple_stream_cb,
                                s_post_multiple_timestamp_cb,
                                s_post_multiple_data_cb);
-    s_client->writeHttpHeader(&bfill, nullPrint.count);
+    s_client->writeHttpHeader(&bfill, null_print.count);
 
     print_post_multiple_values(&bfill, s_number, s_post_multiple_stream_cb,
                                s_post_multiple_timestamp_cb,
@@ -175,16 +175,16 @@ static uint16_t post_multiple_client_internal_datafill_cb(uint8_t fd) {
 
 static uint16_t update_location_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
-  NullPrint nullPrint;
+  NullPrint null_print;
 
   if (fd == s_fd) {
     bfill.print(F("PUT /v1/feeds/"));
     print_encoded_string(&bfill, s_feed_id);
     bfill.println(F("/location HTTP/1.0"));
 
-    nullPrint.count = 0;
-    print_location(&nullPrint, s_has_name, s_has_elevation, s_update_location_data_cb);
-    s_client->writeHttpHeader(&bfill, nullPrint.count);
+    null_print.count = 0;
+    print_location(&null_print, s_has_name, s_has_elevation, s_update_location_data_cb);
+    s_client->writeHttpHeader(&bfill, null_print.count);
 
     print_location(&bfill, s_has_name, s_has_elevation, s_update_location_data_cb);
   }
@@ -201,7 +201,7 @@ static uint8_t client_internal_fetch_response_code_cb(uint8_t fd, uint8_t status
   }
 }
 
-int M2XNanodeClient::put(const char* feedId, const char* streamName,
+int M2XNanodeClient::put(const char* feed_id, const char* stream_name,
                          put_data_fill_callback cb) {
   int i;
   ether.packetLoop(ether.packetReceive());
@@ -209,8 +209,8 @@ int M2XNanodeClient::put(const char* feedId, const char* streamName,
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feedId;
-  s_stream_name = streamName;
+  s_feed_id = feed_id;
+  s_stream_name = stream_name;
   s_put_cb = cb;
   s_response_code = 0;
   s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
@@ -219,7 +219,7 @@ int M2XNanodeClient::put(const char* feedId, const char* streamName,
   return loop();
 }
 
-int M2XNanodeClient::post(const char* feedId, const char* streamName, int valueNumber,
+int M2XNanodeClient::post(const char* feed_id, const char* stream_name, int value_number,
                           post_data_fill_callback timestamp_cb,
                           post_data_fill_callback data_cb) {
   int i;
@@ -228,9 +228,9 @@ int M2XNanodeClient::post(const char* feedId, const char* streamName, int valueN
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feedId;
-  s_stream_name = streamName;
-  s_number = valueNumber;
+  s_feed_id = feed_id;
+  s_stream_name = stream_name;
+  s_number = value_number;
   s_post_timestamp_cb = timestamp_cb;
   s_post_data_cb = data_cb;
   s_response_code = 0;
@@ -240,7 +240,7 @@ int M2XNanodeClient::post(const char* feedId, const char* streamName, int valueN
   return loop();
 }
 
-int M2XNanodeClient::postMultiple(const char* feedId, int streamNumber,
+int M2XNanodeClient::postMultiple(const char* feed_id, int stream_number,
                                   post_multiple_stream_fill_callback stream_cb,
                                   post_multiple_data_fill_callback timestamp_cb,
                                   post_multiple_data_fill_callback data_cb) {
@@ -250,8 +250,8 @@ int M2XNanodeClient::postMultiple(const char* feedId, int streamNumber,
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feedId;
-  s_number = streamNumber;
+  s_feed_id = feed_id;
+  s_number = stream_number;
   s_post_multiple_stream_cb = stream_cb;
   s_post_multiple_timestamp_cb = timestamp_cb;
   s_post_multiple_data_cb = data_cb;
@@ -262,7 +262,7 @@ int M2XNanodeClient::postMultiple(const char* feedId, int streamNumber,
   return loop();
 }
 
-int M2XNanodeClient::updateLocation(const char* feedId, int has_name, int has_elevation,
+int M2XNanodeClient::updateLocation(const char* feed_id, int has_name, int has_elevation,
                                     update_location_data_fill_callback cb) {
   int i;
   ether.packetLoop(ether.packetReceive());
@@ -270,7 +270,7 @@ int M2XNanodeClient::updateLocation(const char* feedId, int has_name, int has_el
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feedId;
+  s_feed_id = feed_id;
   s_has_name = has_name;
   s_has_elevation = has_elevation;
   s_update_location_data_cb = cb;
@@ -302,14 +302,14 @@ int print_encoded_string(Print* print, const char* str) {
   return bytes;
 }
 
-void M2XNanodeClient::writeHttpHeader(Print* print, int contentLength) {
+void M2XNanodeClient::writeHttpHeader(Print* print, int content_length) {
   print->println(USER_AGENT);
   print->print(F("X-M2X-KEY: "));
   print->println(_key);
-  if (contentLength > 0) {
+  if (content_length > 0) {
     print->println(F("Content-Type: application/json"));
     print->print(F("Content-Length: "));
-    print->println(contentLength);
+    print->println(content_length);
   }
   print->println();
 }

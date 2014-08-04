@@ -35,8 +35,8 @@ typedef void (*put_data_fill_callback)(Print* print);
 typedef void (*post_data_fill_callback)(Print* print, int index);
 
 // Returned value is the number of values in current stream
-typedef int (*post_multiple_stream_fill_callback)(Print* print, int streamIndex);
-typedef void (*post_multiple_data_fill_callback)(Print* print, int valueIndex, int streamIndex);
+typedef int (*post_multiple_stream_fill_callback)(Print* print, int stream_index);
+typedef void (*post_multiple_data_fill_callback)(Print* print, int valueIndex, int stream_index);
 
 // Values of data type:
 // 1 - Latitude
@@ -47,7 +47,7 @@ const int kLocationFieldLatitude PROGMEM = 1;
 const int kLocationFieldLongitude PROGMEM = 2;
 const int kLocationFieldName PROGMEM = 3;
 const int kLocationFieldElevation PROGMEM = 4;
-typedef void (*update_location_data_fill_callback)(Print* print, int dataType);
+typedef void (*update_location_data_fill_callback)(Print* print, int data_type);
 
 const int kDefaultM2XPort PROGMEM = 80;
 
@@ -60,20 +60,20 @@ public:
                   int port = kDefaultM2XPort);
 
   // Push data stream value using PUT request, returns the HTTP status code
-  int put(const char* feedId, const char* streamName,
+  int put(const char* feed_id, const char* stream_name,
           put_data_fill_callback cb);
 
   // Push multiple data stream values using POST request, returns the
   // HTTP status code
   // NOTE: timestamp is required in this function
-  int post(const char* feedId, const char* streamName, int valueNumber,
+  int post(const char* feed_id, const char* stream_name, int value_number,
            post_data_fill_callback timestamp_cb,
            post_data_fill_callback data_cb);
 
   // Push multiple data values to multiple streams using POST request,
   // returns HTTP status code
   // NOTE: timestamp is also required here
-  int postMultiple(const char* feedId, int streamNumber,
+  int postMultiple(const char* feed_id, int stream_number,
                    post_multiple_stream_fill_callback stream_cb,
                    post_multiple_data_fill_callback timestamp_cb,
                    post_multiple_data_fill_callback data_cb);
@@ -84,7 +84,7 @@ public:
   // of those parameters: 1 for present, 0 for not present.
   // See the definition of +update_location_data_fill_callback+ for possible
   // value types.
-  int updateLocation(const char* feedId, int has_name, int has_elevation,
+  int updateLocation(const char* feed_id, int has_name, int has_elevation,
                      update_location_data_fill_callback cb);
 
   // WARNING: The functions below this line are not considered APIs, they
@@ -92,7 +92,7 @@ public:
   // sure you know what you are doing before calling them.
 
   // Writes the HTTP header part for updating a stream value
-  void writeHttpHeader(Print* print, int contentLength);
+  void writeHttpHeader(Print* print, int content_length);
 
   // Parses and returns the HTTP status code, note this function will
   // return immediately once it gets the status code
