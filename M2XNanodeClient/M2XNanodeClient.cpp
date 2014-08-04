@@ -42,6 +42,10 @@ static post_multiple_stream_fill_callback s_post_multiple_stream_cb;
 static post_multiple_data_fill_callback s_post_multiple_timestamp_cb;
 static post_multiple_data_fill_callback s_post_multiple_data_cb;
 
+static int s_has_name;
+static int s_has_elevation;
+static update_location_data_fill_callback s_update_location_data_cb;
+
 static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
   NullPrint nullPrint;
@@ -107,6 +111,26 @@ static void print_post_multiple_values(Print* print, int streamNumber,
   print->print("}}");
 }
 
+static void print_location(Print* print, int has_name, int has_elevation,
+                           update_location_data_fill_callback cb) {
+  print->print(F("{"));
+  if (has_name) {
+    print->print(F("\"name\":"));
+    cb(print, kLocationFieldName);
+    print->print(F(","));
+  }
+  if (has_elevation) {
+    print->print(F("\"elevation\":"));
+    cb(print, kLocationFieldElevation);
+    print->print(F(","));
+  }
+  print->print(F("\"latitude\":"));
+  cb(print, kLocationFieldLatitude);
+  print->print(F(",\"longitude\":"));
+  cb(print, kLocationFieldLongitude);
+  print->print(F("}"));
+}
+
 static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
   NullPrint nullPrint;
@@ -145,6 +169,24 @@ static uint16_t post_multiple_client_internal_datafill_cb(uint8_t fd) {
     print_post_multiple_values(&bfill, s_number, s_post_multiple_stream_cb,
                                s_post_multiple_timestamp_cb,
                                s_post_multiple_data_cb);
+  }
+  return bfill.position();
+}
+
+static uint16_t update_location_internal_datafill_cb(uint8_t fd) {
+  BufferFiller bfill = EtherCard::tcpOffset();
+  NullPrint nullPrint;
+
+  if (fd == s_fd) {
+    bfill.print(F("PUT /v1/feeds/"));
+    print_encoded_string(&bfill, s_feed_id);
+    bfill.println(F("/location HTTP/1.0"));
+
+    nullPrint.count = 0;
+    print_location(&nullPrint, s_has_name, s_has_elevation, s_update_location_data_cb);
+    s_client->writeHttpHeader(&bfill, nullPrint.count);
+
+    print_location(&bfill, s_has_name, s_has_elevation, s_update_location_data_cb);
   }
   return bfill.position();
 }
@@ -220,6 +262,24 @@ int M2XNanodeClient::postMultiple(const char* feedId, int streamNumber,
   return loop();
 }
 
+int M2XNanodeClient::updateLocation(const char* feedId, int has_name, int has_elevation,
+                                    update_location_data_fill_callback cb) {
+  int i;
+  ether.packetLoop(ether.packetReceive());
+  for (i = 0; i < 4; i++) {
+    ether.hisip[i] = (*_addr)[i];
+  }
+  s_client = this;
+  s_feed_id = feedId;
+  s_has_name = has_name;
+  s_has_elevation = has_elevation;
+  s_update_location_data_cb = cb;
+  s_response_code = 0;
+  s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
+                            update_location_internal_datafill_cb,
+                            _port);
+  return loop();
+}
 
 // Encodes and prints string using Percent-encoding specified
 // in RFC 1738, Section 2.2

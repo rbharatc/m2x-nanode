@@ -38,6 +38,17 @@ typedef void (*post_data_fill_callback)(Print* print, int index);
 typedef int (*post_multiple_stream_fill_callback)(Print* print, int streamIndex);
 typedef void (*post_multiple_data_fill_callback)(Print* print, int valueIndex, int streamIndex);
 
+// Values of data type:
+// 1 - Latitude
+// 2 - Longitude
+// 3 - Name
+// 4 - Elevation
+const int kLocationFieldLatitude PROGMEM = 1;
+const int kLocationFieldLongitude PROGMEM = 2;
+const int kLocationFieldName PROGMEM = 3;
+const int kLocationFieldElevation PROGMEM = 4;
+typedef void (*update_location_data_fill_callback)(Print* print, int dataType);
+
 const int kDefaultM2XPort PROGMEM = 80;
 
 class M2XNanodeClient {
@@ -66,6 +77,15 @@ public:
                    post_multiple_stream_fill_callback stream_cb,
                    post_multiple_data_fill_callback timestamp_cb,
                    post_multiple_data_fill_callback data_cb);
+
+  // Update datasource location using PUT request, returns HTTP status code.
+  // Name and elevation are optional parameters in the API request. Hence
+  // you can use +has_name+ and +has_elevation+ to control the presence
+  // of those parameters: 1 for present, 0 for not present.
+  // See the definition of +update_location_data_fill_callback+ for possible
+  // value types.
+  int updateLocation(const char* feedId, int has_name, int has_elevation,
+                     update_location_data_fill_callback cb);
 
   // WARNING: The functions below this line are not considered APIs, they
   // are made public only to ensure callback functions can call them. Make
