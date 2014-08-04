@@ -18,18 +18,6 @@ const int E_INVALID = -2;
 const int E_TIMEOUT = -3;
 const int E_NOMATCH = -4;
 
-typedef void (*stream_value_read_callback)(const char* at,
-                                           const char* value,
-                                           int index,
-                                           void* context);
-
-typedef void (*location_read_callback)(const char* name,
-                                       double latitude,
-                                       double longitude,
-                                       double elevation,
-                                       const char* timestamp,
-                                       int index,
-                                       void* context);
 typedef void (*put_data_fill_callback)(Print* print);
 typedef void (*post_data_fill_callback)(Print* print, int index);
 
