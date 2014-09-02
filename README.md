@@ -30,7 +30,9 @@ Please consult the [M2X glossary](https://m2x.att.com/developer/documentation/gl
 
 6. Change `Feed ID`, `Stream Name` and `M2X Key` fields to contain correct values (from your M2X account).
 
-7. Now you can run the examples!
+7. Set the board type to Arduino UNO via `Tools` -> `Board Type` -> `Arduino UNO`.
+
+8. Now you can run the examples!
 
 **NOTE**: For simplicity, all of provided examples use fixed values as inputs. If you want to use values obtained from real sensors as inputs, please refer to [this tutorial](http://shop.wickeddevice.com/2013/10/16/nanode-gatewayremote-sensing-tutorial-1/) for the value gathering functionality.
 
