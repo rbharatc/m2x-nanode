@@ -156,3 +156,11 @@ Like all the requests outlined above, if string-typed values are printed, double
 * In our tests with Nanode based devices, we found that there is a small chance that an API request may timeout. This occurs inside the ethercard library: our internal callback functions are not called at all. We suspect that this may be related to the way TCP/IP is implemented in the library, or our way of using the library (we might accidently set the wrong parameter for some option).
 
 * Unlike the Arduino client library, fetching values is not supported in the Nanode library. This is because [ethercard](https://github.com/xxuejie/ethercard) does not support packet streaming: when a packet arrives, ethercard will read all the data into memory before handling over control to our code. Considering the fact that a Nanode only has 2kb memory, and that a simple M2X List Value API response contains 4k-5k data, we can never process this request on Nanode successfully.
+ 
+
+
+## License
+
+The Nanode M2X API Client is available under the MIT license. See the [LICENSE](LICENSE) file for more information.
+
+
