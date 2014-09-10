@@ -42,6 +42,8 @@ static int s_has_name;
 static int s_has_elevation;
 static update_location_data_fill_callback s_update_location_data_cb;
 
+static delete_values_timestamp_fill_callback s_delete_cb;
+
 static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
   NullPrint null_print;
@@ -127,6 +129,14 @@ static void print_location(Print* print, int has_name, int has_elevation,
   print->print(F("}"));
 }
 
+static void print_delete_values(Print* print, delete_values_timestamp_fill_callback cb) {
+  print->print(F("{\"from\":"));
+  cb(print, 1);
+  print->print(F(",\"end\":"));
+  cb(print, 2);
+  print->print(F("}"));
+}
+
 static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
   NullPrint null_print;
@@ -183,6 +193,26 @@ static uint16_t update_location_internal_datafill_cb(uint8_t fd) {
     s_client->writeHttpHeader(&bfill, null_print.count);
 
     print_location(&bfill, s_has_name, s_has_elevation, s_update_location_data_cb);
+  }
+  return bfill.position();
+}
+
+static uint16_t delete_client_internal_datafill_cb(uint8_t fd) {
+  BufferFiller bfill = EtherCard::tcpOffset();
+  NullPrint null_print;
+
+  if (fd == s_fd) {
+    bfill.print(F("DELETE /v1/feeds/"));
+    print_encoded_string(&bfill, s_feed_id);
+    bfill.print(F("/streams/"));
+    print_encoded_string(&bfill, s_stream_name);
+    bfill.println(F("/values HTTP/1.0"));
+
+    null_print.count = 0;
+    print_delete_values(&null_print, s_delete_cb);
+    s_client->writeHttpHeader(&bfill, null_print.count);
+
+    print_delete_values(&bfill, s_delete_cb);
   }
   return bfill.position();
 }
@@ -273,6 +303,24 @@ int M2XNanodeClient::updateLocation(const char* feed_id, int has_name, int has_e
   s_response_code = 0;
   s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
                             update_location_internal_datafill_cb,
+                            _port);
+  return loop();
+}
+
+int M2XNanodeClient::deleteValues(const char* feed_id, const char* stream_name,
+                                  delete_values_timestamp_fill_callback timestamp_cb) {
+  int i;
+  ether.packetLoop(ether.packetReceive());
+  for (i = 0; i < 4; i++) {
+    ether.hisip[i] = (*_addr)[i];
+  }
+  s_client = this;
+  s_feed_id = feed_id;
+  s_stream_name = stream_name;
+  s_delete_cb = timestamp_cb;
+  s_response_code = 0;
+  s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
+                            delete_client_internal_datafill_cb,
                             _port);
   return loop();
 }

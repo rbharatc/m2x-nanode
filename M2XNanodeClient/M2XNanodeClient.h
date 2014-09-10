@@ -36,6 +36,13 @@ const int kLocationFieldName PROGMEM = 3;
 const int kLocationFieldElevation PROGMEM = 4;
 typedef void (*update_location_data_fill_callback)(Print* print, int data_type);
 
+// Values of timestamp type:
+// 1 - Start
+// 2 - End
+const int kDeleteTimestampStart PROGMEM = 1;
+const int kDeleteTimestampEnd PROGMEM = 2;
+typedef void (*delete_values_timestamp_fill_callback)(Print* print, int type);
+
 const int kDefaultM2XPort PROGMEM = 80;
 
 class M2XNanodeClient {
@@ -73,6 +80,23 @@ public:
   // value types.
   int updateLocation(const char* feed_id, int has_name, int has_elevation,
                      update_location_data_fill_callback cb);
+
+  // Delete values from a data stream
+  // You will need to provide from and end date/time strings in the ISO8601
+  // format "yyyy-mm-ddTHH:MM:SS.SSSZ" where
+  //   yyyy: the year
+  //   mm: the month
+  //   dd: the day
+  //   HH: the hour (24 hour format)
+  //   MM: the minute
+  //   SS.SSS: the seconds (to the millisecond)
+  // NOTE: the time is given in Zulu (GMT)
+  // M2X will delete all values within the from to end date/time range.
+  // The status code is 204 on success and 400 on a bad request (e.g. the
+  // timestamp is not in ISO8601 format or the from timestamp is not less than
+  // or equal to the end timestamp.
+  int deleteValues(const char* feed_id, const char* stream_name,
+                   delete_values_timestamp_fill_callback timestamp_cb);
 
   // WARNING: The functions below this line are not considered APIs, they
   // are made public only to ensure callback functions can call them. Make
