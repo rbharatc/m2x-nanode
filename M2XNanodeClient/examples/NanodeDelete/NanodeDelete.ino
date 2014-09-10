@@ -50,5 +50,7 @@ void loop() {
     int response = m2xClient.deleteValues(feedId, streamName, fill_timestamp_cb);
     Serial.print("Code: ");
     Serial.println(response);
+
+    finished = true;
   }
 }
