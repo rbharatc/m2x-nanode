@@ -53,7 +53,7 @@ static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
     print_encoded_string(&bfill, s_feed_id);
     bfill.print(F("/streams/"));
     print_encoded_string(&bfill, s_stream_name);
-    bfill.println(F(" HTTP/1.0"));
+    bfill.println(F("/value HTTP/1.0"));
 
     null_print.count = 0;
     s_put_cb(&null_print);
