@@ -24,7 +24,7 @@ M2XNanodeClient::M2XNanodeClient(const char* key,
 }
 
 static M2XNanodeClient* s_client;
-static const char* s_feed_id;
+static const char* s_device_id;
 static const char* s_stream_name;
 static put_data_fill_callback s_put_cb;
 static int s_fd;
@@ -49,8 +49,8 @@ static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
   NullPrint null_print;
 
   if (fd == s_fd) {
-    bfill.print(F("PUT /v1/feeds/"));
-    print_encoded_string(&bfill, s_feed_id);
+    bfill.print(F("PUT /v2/devices/"));
+    print_encoded_string(&bfill, s_device_id);
     bfill.print(F("/streams/"));
     print_encoded_string(&bfill, s_stream_name);
     bfill.println(F("/value HTTP/1.0"));
@@ -142,8 +142,8 @@ static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
   NullPrint null_print;
 
   if (fd == s_fd) {
-    bfill.print(F("POST /v1/feeds/"));
-    print_encoded_string(&bfill, s_feed_id);
+    bfill.print(F("POST /v2/devices/"));
+    print_encoded_string(&bfill, s_device_id);
     bfill.print(F("/streams/"));
     print_encoded_string(&bfill, s_stream_name);
     bfill.println(F("/values HTTP/1.0"));
@@ -162,9 +162,9 @@ static uint16_t post_multiple_client_internal_datafill_cb(uint8_t fd) {
   NullPrint null_print;
 
   if (fd == s_fd) {
-    bfill.print(F("POST /v1/feeds/"));
-    print_encoded_string(&bfill, s_feed_id);
-    bfill.println(F(" HTTP/1.0"));
+    bfill.print(F("POST /v2/devices/"));
+    print_encoded_string(&bfill, s_device_id);
+    bfill.println(F("/updates HTTP/1.0"));
 
     null_print.count = 0;
     print_post_multiple_values(&null_print, s_number, s_post_multiple_stream_cb,
@@ -184,8 +184,8 @@ static uint16_t update_location_internal_datafill_cb(uint8_t fd) {
   NullPrint null_print;
 
   if (fd == s_fd) {
-    bfill.print(F("PUT /v1/feeds/"));
-    print_encoded_string(&bfill, s_feed_id);
+    bfill.print(F("PUT /v2/devices/"));
+    print_encoded_string(&bfill, s_device_id);
     bfill.println(F("/location HTTP/1.0"));
 
     null_print.count = 0;
@@ -202,8 +202,8 @@ static uint16_t delete_client_internal_datafill_cb(uint8_t fd) {
   NullPrint null_print;
 
   if (fd == s_fd) {
-    bfill.print(F("DELETE /v1/feeds/"));
-    print_encoded_string(&bfill, s_feed_id);
+    bfill.print(F("DELETE /v2/devices/"));
+    print_encoded_string(&bfill, s_device_id);
     bfill.print(F("/streams/"));
     print_encoded_string(&bfill, s_stream_name);
     bfill.println(F("/values HTTP/1.0"));
@@ -227,15 +227,15 @@ static uint8_t client_internal_fetch_response_code_cb(uint8_t fd, uint8_t status
   }
 }
 
-int M2XNanodeClient::put(const char* feed_id, const char* stream_name,
-                         put_data_fill_callback cb) {
+int M2XNanodeClient::updateStreamValue(const char* device_id, const char* stream_name,
+                                       put_data_fill_callback cb) {
   int i;
   ether.packetLoop(ether.packetReceive());
   for (i = 0; i < 4; i++) {
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feed_id;
+  s_device_id = device_id;
   s_stream_name = stream_name;
   s_put_cb = cb;
   s_response_code = 0;
@@ -245,16 +245,16 @@ int M2XNanodeClient::put(const char* feed_id, const char* stream_name,
   return loop();
 }
 
-int M2XNanodeClient::post(const char* feed_id, const char* stream_name, int value_number,
-                          post_data_fill_callback timestamp_cb,
-                          post_data_fill_callback data_cb) {
+int M2XNanodeClient::postStreamValues(const char* device_id, const char* stream_name, int value_number,
+                                      post_data_fill_callback timestamp_cb,
+                                      post_data_fill_callback data_cb) {
   int i;
   ether.packetLoop(ether.packetReceive());
   for (i = 0; i < 4; i++) {
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feed_id;
+  s_device_id = device_id;
   s_stream_name = stream_name;
   s_number = value_number;
   s_post_timestamp_cb = timestamp_cb;
@@ -266,17 +266,17 @@ int M2XNanodeClient::post(const char* feed_id, const char* stream_name, int valu
   return loop();
 }
 
-int M2XNanodeClient::postMultiple(const char* feed_id, int stream_number,
-                                  post_multiple_stream_fill_callback stream_cb,
-                                  post_multiple_data_fill_callback timestamp_cb,
-                                  post_multiple_data_fill_callback data_cb) {
+int M2XNanodeClient::postDeviceUpdates(const char* device_id, int stream_number,
+                                       post_multiple_stream_fill_callback stream_cb,
+                                       post_multiple_data_fill_callback timestamp_cb,
+                                       post_multiple_data_fill_callback data_cb) {
   int i;
   ether.packetLoop(ether.packetReceive());
   for (i = 0; i < 4; i++) {
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feed_id;
+  s_device_id = device_id;
   s_number = stream_number;
   s_post_multiple_stream_cb = stream_cb;
   s_post_multiple_timestamp_cb = timestamp_cb;
@@ -288,7 +288,7 @@ int M2XNanodeClient::postMultiple(const char* feed_id, int stream_number,
   return loop();
 }
 
-int M2XNanodeClient::updateLocation(const char* feed_id, int has_name, int has_elevation,
+int M2XNanodeClient::updateLocation(const char* device_id, int has_name, int has_elevation,
                                     update_location_data_fill_callback cb) {
   int i;
   ether.packetLoop(ether.packetReceive());
@@ -296,7 +296,7 @@ int M2XNanodeClient::updateLocation(const char* feed_id, int has_name, int has_e
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feed_id;
+  s_device_id = device_id;
   s_has_name = has_name;
   s_has_elevation = has_elevation;
   s_update_location_data_cb = cb;
@@ -307,7 +307,7 @@ int M2XNanodeClient::updateLocation(const char* feed_id, int has_name, int has_e
   return loop();
 }
 
-int M2XNanodeClient::deleteValues(const char* feed_id, const char* stream_name,
+int M2XNanodeClient::deleteValues(const char* device_id, const char* stream_name,
                                   delete_values_timestamp_fill_callback timestamp_cb) {
   int i;
   ether.packetLoop(ether.packetReceive());
@@ -315,7 +315,7 @@ int M2XNanodeClient::deleteValues(const char* feed_id, const char* stream_name,
     ether.hisip[i] = (*_addr)[i];
   }
   s_client = this;
-  s_feed_id = feed_id;
+  s_device_id = device_id;
   s_stream_name = stream_name;
   s_delete_cb = timestamp_cb;
   s_response_code = 0;

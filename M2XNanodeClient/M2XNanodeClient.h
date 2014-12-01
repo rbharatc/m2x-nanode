@@ -7,7 +7,7 @@
 
 #define MIN(a, b) (((a) > (b))?(b):(a))
 
-#define USER_AGENT F("User-Agent: M2X Nanode Client/1.0.0")
+#define USER_AGENT F("User-Agent: M2X Nanode Client/2.0.0")
 
 #define HEX(t_) ((char) (((t_) > 9) ? ((t_) - 10 + 'A') : ((t_) + '0')))
 #define MAX_DOUBLE_DIGITS 7
@@ -54,23 +54,23 @@ public:
                   int port = kDefaultM2XPort);
 
   // Push data stream value using PUT request, returns the HTTP status code
-  int put(const char* feed_id, const char* stream_name,
-          put_data_fill_callback cb);
+  int updateStreamValue(const char* device_id, const char* stream_name,
+                        put_data_fill_callback cb);
 
   // Push multiple data stream values using POST request, returns the
   // HTTP status code
   // NOTE: timestamp is required in this function
-  int post(const char* feed_id, const char* stream_name, int value_number,
-           post_data_fill_callback timestamp_cb,
-           post_data_fill_callback data_cb);
+  int postStreamValues(const char* device_id, const char* stream_name, int value_number,
+                       post_data_fill_callback timestamp_cb,
+                       post_data_fill_callback data_cb);
 
   // Push multiple data values to multiple streams using POST request,
   // returns HTTP status code
   // NOTE: timestamp is also required here
-  int postMultiple(const char* feed_id, int stream_number,
-                   post_multiple_stream_fill_callback stream_cb,
-                   post_multiple_data_fill_callback timestamp_cb,
-                   post_multiple_data_fill_callback data_cb);
+  int postDeviceUpdates(const char* device_id, int stream_number,
+                        post_multiple_stream_fill_callback stream_cb,
+                        post_multiple_data_fill_callback timestamp_cb,
+                        post_multiple_data_fill_callback data_cb);
 
   // Update datasource location using PUT request, returns HTTP status code.
   // Name and elevation are optional parameters in the API request. Hence
@@ -78,7 +78,7 @@ public:
   // of those parameters: 1 for present, 0 for not present.
   // See the definition of +update_location_data_fill_callback+ for possible
   // value types.
-  int updateLocation(const char* feed_id, int has_name, int has_elevation,
+  int updateLocation(const char* device_id, int has_name, int has_elevation,
                      update_location_data_fill_callback cb);
 
   // Delete values from a data stream
@@ -95,7 +95,7 @@ public:
   // The status code is 204 on success and 400 on a bad request (e.g. the
   // timestamp is not in ISO8601 format or the from timestamp is not less than
   // or equal to the end timestamp.
-  int deleteValues(const char* feed_id, const char* stream_name,
+  int deleteValues(const char* device_id, const char* stream_name,
                    delete_values_timestamp_fill_callback timestamp_cb);
 
   // WARNING: The functions below this line are not considered APIs, they

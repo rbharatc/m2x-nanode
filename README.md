@@ -48,14 +48,14 @@ Due to the memory limitations of Nanode boards, most of the APIs provided work i
 
 For more details on how this works, please refer to the examples.
 
-### PUT API ###
+### UpdateStreamValue API ###
 
-The PUT API is the simplest approach to pushing data into M2X. The API interface is as follows:
+The UpdateStreamValue API is the simplest approach to pushing data into M2X. The API interface is as follows:
 
 ```
 typedef void (*put_data_fill_callback)(Print* print);
-int put(const char* feed_id, const char* stream_name,
-          put_data_fill_callback cb);
+int updateStreamValue(const char* device_id, const char* stream_name,
+                      put_data_fill_callback cb);
 ```
 
 A sample callback function will look like the following:
@@ -75,9 +75,9 @@ void fill_data_cb(Print* print) {
 }
 ```
 
-### POST API ###
+### PostStreamValues API ###
 
-The POST API has the following differences from PUT API:
+PostStreamValues API has the following differences from UpdateStreamValue API:
 
 1. You can push multiple values in one request;
 2. For each value, you also need to provide an ISO8601-formatted timestamp.
@@ -86,12 +86,12 @@ The calling interface for this API is as follows:
 
 ```
 typedef void (*post_data_fill_callback)(Print* print, int index);
-int post(const char* feed_id, const char* stream_name, int value_number,
-           post_data_fill_callback timestamp_cb,
-           post_data_fill_callback data_cb);
+int postStreamValues(const char* device_id, const char* stream_name, int value_number,
+                     post_data_fill_callback timestamp_cb,
+                     post_data_fill_callback data_cb);
 ```
 
-Notice here that we use tw0 callback functions: one for timestamp, and one for data. For each callback function, the client library will invoke it `value_number` times, each time for a different value to be pushed.
+Notice here that we use two callback functions: one for timestamp, and one for data. For each callback function, the client library will invoke it `value_number` times, each time for a different value to be pushed.
 
 Notice for timestamp and string-typed values, double quotes are needed:
 
@@ -106,17 +106,17 @@ void fill_timestamp_cb(Print* print, int index) {
 }
 ```
 
-### POST Multiple API ###
+### PostDeviceUpdates API ###
 
-The POST Multiple API has one more advantage over the POST API: it allows pushing multiple values to multiple streams in one request. As a result, the calling interface for this API is more complex:
+PostDeviceUpdates API has one more advantage over the PostStreamValues API: it allows pushing multiple values to multiple streams in one request. As a result, the calling interface for this API is more complex:
 
 ```
 typedef int (*post_multiple_stream_fill_callback)(Print* print, int stream_index);
 typedef void (*post_multiple_data_fill_callback)(Print* print, int value_index, int stream_index);
-int postMultiple(const char* feed_id, int stream_number,
-                 post_multiple_stream_fill_callback stream_cb,
-                 post_multiple_data_fill_callback timestamp_cb,
-                 post_multiple_data_fill_callback data_cb);
+int postDeviceUpdates(const char* device_id, int stream_number,
+                      post_multiple_stream_fill_callback stream_cb,
+                      post_multiple_data_fill_callback timestamp_cb,
+                      post_multiple_data_fill_callback data_cb);
 ```
 
 First, `stream_number` denotes how many streams we are pushing to. For each stream, `stream_cb` will be called with the corresponding index, this callback function has 2 effects:
@@ -151,13 +151,37 @@ Depending on the values `has_name` and `has_elevation`, the callback function wi
 
 Like all the requests outlined above, if string-typed values are printed, double quotes are needed as well.
 
+### Delete Values API ###
+
+Delete Values API can be used to delete values within a specific time range. The calling API is as follows:
+
+```
+// Values for timestamp type:
+// 1 - Start Time
+// 2 - End Time
+typedef void (*delete_values_timestamp_fill_callback)(Print* print, int type);
+int deleteValues(const char* device_id, const char* stream_name,
+                 delete_values_timestamp_fill_callback timestamp_cb);
+
+```
+
+Following is an example of the callback function:
+
+```
+void fill_timestamp_cb(Print* print, int type) {
+  if (type == 1) {
+    print->print("\"2014-07-01T00:00:00.000Z\"");
+  } else {
+    print->print("\"2014-07-30T00:00:00.000Z\"");
+  }
+}
+```
+
 ## Known Issues ##
 
 * In our tests with Nanode based devices, we found that there is a small chance that an API request may timeout. This occurs inside the ethercard library: our internal callback functions are not called at all. We suspect that this may be related to the way TCP/IP is implemented in the library, or our way of using the library (we might accidently set the wrong parameter for some option).
 
 * Unlike the Arduino client library, fetching values is not supported in the Nanode library. This is because [ethercard](https://github.com/xxuejie/ethercard) does not support packet streaming: when a packet arrives, ethercard will read all the data into memory before handling over control to our code. Considering the fact that a Nanode only has 2kb memory, and that a simple M2X List Value API response contains 4k-5k data, we can never process this request on Nanode successfully.
- 
-
 
 ## License
 

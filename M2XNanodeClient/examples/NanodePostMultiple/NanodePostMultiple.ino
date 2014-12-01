@@ -68,7 +68,7 @@ void loop() {
     M2XNanodeClient m2xClient(m2xKey, &addr);
 
     Serial.println("Request!");
-    int response = m2xClient.postMultiple(feedId, 2, fill_stream_cb, fill_timestamp_cb, fill_data_cb);
+    int response = m2xClient.postDeviceUpdates(feedId, 2, fill_stream_cb, fill_timestamp_cb, fill_data_cb);
     Serial.print("Code: ");
     Serial.println(response);
 
