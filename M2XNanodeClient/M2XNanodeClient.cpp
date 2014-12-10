@@ -74,7 +74,7 @@ static void print_post_values(Print* print, int value_number,
   int i;
   print->print("{\"values\":[");
   for (i = 0; i < value_number; i++) {
-    print->print("{\"at\":");
+    print->print("{\"timestamp\":");
     timestamp_cb(print, i);
     print->print(",\"value\":");
     data_cb(print, i);
@@ -96,7 +96,7 @@ static void print_post_multiple_values(Print* print, int stream_number,
     value_number = stream_cb(print, si);
     print->print(":[");
     for (vi = 0; vi < value_number; vi++) {
-      print->print("{\"at\":");
+      print->print("{\"timestamp\":");
       timestamp_cb(print, vi, si);
       print->print(",\"value\":");
       data_cb(print, vi, si);
