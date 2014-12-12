@@ -9,7 +9,7 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 // bytes than the previous 2 examples
 byte Ethernet::buffer[700];
 
-char feedId[] = "<Feed ID>"; // Feed you want to post to
+char deviceId[] = "<Device ID>"; // Device you want to post to
 char m2xKey[] = "<M2X Key>"; // Your M2X access key
 const char website[] PROGMEM = "api-m2x.att.com";
 
@@ -68,7 +68,7 @@ void loop() {
     M2XNanodeClient m2xClient(m2xKey, &addr);
 
     Serial.println("Request!");
-    int response = m2xClient.postDeviceUpdates(feedId, 2, fill_stream_cb, fill_timestamp_cb, fill_data_cb);
+    int response = m2xClient.postDeviceUpdates(deviceId, 2, fill_stream_cb, fill_timestamp_cb, fill_data_cb);
     Serial.print("Code: ");
     Serial.println(response);
 

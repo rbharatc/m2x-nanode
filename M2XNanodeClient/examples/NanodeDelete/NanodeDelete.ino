@@ -7,7 +7,7 @@
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 byte Ethernet::buffer[400];
 
-char feedId[] = "<Feed ID>"; // Feed you want to delete values
+char deviceId[] = "<Device ID>"; // Device you want to delete values
 char streamName[] = "<Stream Name>"; // Stream you want to delete values
 char m2xKey[] = "<M2X Key>"; // Your M2X access key
 const char website[] PROGMEM = "api-m2x.att.com";
@@ -47,7 +47,7 @@ void loop() {
     M2XNanodeClient m2xClient(m2xKey, &addr);
 
     Serial.println("Request!");
-    int response = m2xClient.deleteValues(feedId, streamName, fill_timestamp_cb);
+    int response = m2xClient.deleteValues(deviceId, streamName, fill_timestamp_cb);
     Serial.print("Code: ");
     Serial.println(response);
 

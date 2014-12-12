@@ -6,7 +6,7 @@ The AT&T M2X API provides all the needed operations to connect your device to AT
 
 1. Signup for an [M2X Account](https://m2x.att.com/signup).
 2. Obtain your _Master Key_ from the Master Keys tab of your [Account Settings](https://m2x.att.com/account) screen.
-3. Create your first [Data Source Blueprint](https://m2x.att.com/blueprints) and copy its _Feed ID_.
+3. Create your first [Data Source Blueprint](https://m2x.att.com/blueprints) and copy its _Device ID_.
 4. Review the [M2X API Documentation](https://m2x.att.com/developer/documentation/overview).
 
 Please consult the [M2X glossary](https://m2x.att.com/developer/documentation/glossary) if you have questions about any M2X specific terms.
@@ -28,7 +28,7 @@ Please consult the [M2X glossary](https://m2x.att.com/developer/documentation/gl
 
 5. Open one of the Nanode examples in `File`->`Examples`->`M2XNanodeClient`.
 
-6. Change `Feed ID`, `Stream Name` and `M2X Key` fields to contain correct values (from your M2X account).
+6. Change `Device ID`, `Stream Name` and `M2X Key` fields to contain correct values (from your M2X account).
 
 7. Set the board type to Arduino UNO via `Tools` -> `Board Type` -> `Arduino UNO`.
 
@@ -141,7 +141,7 @@ The update Location API can be used to update the location of a datasource. The 
 // 3 - Name
 // 4 - Elevation
 typedef void (*update_location_data_fill_callback)(Print* print, int data_type);
-int updateLocation(const char* feed_id, int has_name, int has_elevation,
+int updateLocation(const char* device_id, int has_name, int has_elevation,
                    update_location_data_fill_callback cb);
 ```
 
