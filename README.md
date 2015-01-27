@@ -7,9 +7,9 @@ The AT&T M2X API provides all the needed operations to connect your device to AT
 1. Signup for an [M2X Account](https://m2x.att.com/signup).
 2. Obtain your _Master Key_ from the Master Keys tab of your [Account Settings](https://m2x.att.com/account) screen.
 3. Create your first [Device](https://m2x.att.com/devices) and copy its _Device ID_.
-4. Review the [M2X API Documentation](https://m2x.att.com/developer/documentation/overview).
+4. Review the [M2X API Documentation](https://m2x.att.com/developer/documentation/v2/overview).
 
-Please consult the [M2X glossary](https://m2x.att.com/developer/documentation/glossary) if you have questions about any M2X specific terms.
+Please consult the [M2X glossary](https://m2x.att.com/developer/documentation/v2/glossary) if you have questions about any M2X specific terms.
 
 
 ## How to Use the Library ##
