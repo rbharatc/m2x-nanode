@@ -61,9 +61,9 @@ static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
     int content_length = null_print.count + 10;
     s_client->writeHttpHeader(&bfill, content_length);
 
-    bfill.print(F("{\"value\":"));
+    bfill.print(F("{\"value\":\""));
     s_put_cb(&bfill);
-    bfill.print(F("}"));
+    bfill.print(F("\"}"));
   }
   return bfill.position();
 }
@@ -76,9 +76,9 @@ static void print_post_values(Print* print, int value_number,
   for (i = 0; i < value_number; i++) {
     print->print("{\"timestamp\":");
     timestamp_cb(print, i);
-    print->print(",\"value\":");
+    print->print(",\"value\":\"");
     data_cb(print, i);
-    print->print("}");
+    print->print("\"}");
     if (i != value_number - 1) {
       print->print(",");
     }
@@ -98,9 +98,9 @@ static void print_post_multiple_values(Print* print, int stream_number,
     for (vi = 0; vi < value_number; vi++) {
       print->print("{\"timestamp\":");
       timestamp_cb(print, vi, si);
-      print->print(",\"value\":");
+      print->print(",\"value\":\"");
       data_cb(print, vi, si);
-      print->print("}");
+      print->print("\"}");
       if (vi != value_number - 1) { print->print(","); }
     }
     print->print("]");
