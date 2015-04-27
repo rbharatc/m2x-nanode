@@ -7,7 +7,7 @@
 
 #define MIN(a, b) (((a) > (b))?(b):(a))
 
-#define USER_AGENT F("User-Agent: M2X Nanode Client/2.0.0")
+#define USER_AGENT F("User-Agent: M2X Nanode Client/2.0.2")
 
 #define HEX(t_) ((char) (((t_) > 9) ? ((t_) - 10 + 'A') : ((t_) + '0')))
 #define MAX_DOUBLE_DIGITS 7

@@ -58,7 +58,7 @@ static uint16_t put_client_internal_datafill_cb(uint8_t fd) {
     null_print.count = 0;
     s_put_cb(&null_print);
     // 10 for {"value": and }
-    int content_length = null_print.count + 10;
+    int content_length = null_print.count + 12;
     s_client->writeHttpHeader(&bfill, content_length);
 
     bfill.print(F("{\"value\":\""));
