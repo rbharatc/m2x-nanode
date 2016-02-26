@@ -72,6 +72,15 @@ public:
                         post_multiple_data_fill_callback timestamp_cb,
                         post_multiple_data_fill_callback data_cb);
 
+  // Push multiple data values to multiple streams of one device
+  // returns HTTP status code
+  // NOTE: timestamp is actually optional here, use NULL if you don't
+  // want to pass timestamp here.
+  int postDeviceUpdate(const char* device_id, int stream_number,
+                       put_data_fill_callback timestamp_cb,
+                       post_multiple_stream_fill_callback stream_cb,
+                       post_multiple_data_fill_callback data_cb);
+
   // Update datasource location using PUT request, returns HTTP status code.
   // Name and elevation are optional parameters in the API request. Hence
   // you can use +has_name+ and +has_elevation+ to control the presence

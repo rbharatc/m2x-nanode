@@ -92,7 +92,7 @@ static void print_post_multiple_values(Print* print, int stream_number,
                                        post_multiple_data_fill_callback data_cb) {
   int si, vi, value_number;
   print->print("{\"values\":{");
-  for (si = 0; si < value_number; si++) {
+  for (si = 0; si < stream_number; si++) {
     value_number = stream_cb(print, si);
     print->print(":[");
     for (vi = 0; vi < value_number; vi++) {
@@ -104,7 +104,29 @@ static void print_post_multiple_values(Print* print, int stream_number,
       if (vi != value_number - 1) { print->print(","); }
     }
     print->print("]");
-    if (si != value_number - 1) { print->print(","); }
+    if (si != stream_number - 1) { print->print(","); }
+  }
+  print->print("}}");
+}
+
+static void print_post_multiple_values_one_device(
+    Print* print, int stream_number,
+    put_data_fill_callback timestamp_cb,
+    post_multiple_stream_fill_callback stream_cb,
+    post_multiple_data_fill_callback data_cb) {
+  int si;
+  print->print("{");
+  if (timestamp_cb) {
+    print->print("\"timestamp\":");
+    timestamp_cb(print);
+    print->print(",");
+  }
+  print->print("\"values\":{");
+  for (si = 0; si < stream_number; si++) {
+    stream_cb(print, si);
+    print->print(":");
+    data_cb(print, 0, si);
+    if (si != stream_number - 1) { print->print(","); }
   }
   print->print("}}");
 }
@@ -175,6 +197,28 @@ static uint16_t post_multiple_client_internal_datafill_cb(uint8_t fd) {
     print_post_multiple_values(&bfill, s_number, s_post_multiple_stream_cb,
                                s_post_multiple_timestamp_cb,
                                s_post_multiple_data_cb);
+  }
+  return bfill.position();
+}
+
+static uint16_t post_single_device_internal_datafill_cb(uint8_t fd) {
+  BufferFiller bfill = EtherCard::tcpOffset();
+  NullPrint null_print;
+
+  if (fd == s_fd) {
+    bfill.print(F("POST /v2/devices/"));
+    print_encoded_string(&bfill, s_device_id);
+    bfill.println(F("/update HTTP/1.0"));
+
+    null_print.count = 0;
+    print_post_multiple_values_one_device(&null_print, s_number, s_put_cb,
+                                          s_post_multiple_stream_cb,
+                                          s_post_multiple_data_cb);
+    s_client->writeHttpHeader(&bfill, null_print.count);
+
+    print_post_multiple_values_one_device(&bfill, s_number, s_put_cb,
+                                          s_post_multiple_stream_cb,
+                                          s_post_multiple_data_cb);
   }
   return bfill.position();
 }
@@ -287,6 +331,29 @@ int M2XNanodeClient::postDeviceUpdates(const char* device_id, int stream_number,
                             _port);
   return loop();
 }
+
+int M2XNanodeClient::postDeviceUpdate(const char* device_id, int stream_number,
+                                      put_data_fill_callback timestamp_cb,
+                                      post_multiple_stream_fill_callback stream_cb,
+                                      post_multiple_data_fill_callback data_cb) {
+  int i;
+  ether.packetLoop(ether.packetReceive());
+  for (i = 0; i < 4; i++) {
+    ether.hisip[i] = (*_addr)[i];
+  }
+  s_client = this;
+  s_device_id = device_id;
+  s_number = stream_number;
+  s_put_cb = timestamp_cb;
+  s_post_multiple_stream_cb = stream_cb;
+  s_post_multiple_data_cb = data_cb;
+  s_response_code = 0;
+  s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
+                            post_single_device_internal_datafill_cb,
+                            _port);
+  return loop();
+}
+
 
 int M2XNanodeClient::updateLocation(const char* device_id, int has_name, int has_elevation,
                                     update_location_data_fill_callback cb) {
