@@ -107,6 +107,14 @@ public:
   int deleteValues(const char* device_id, const char* stream_name,
                    delete_values_timestamp_fill_callback timestamp_cb);
 
+  // Mark a command as processed
+  int markCommandProcessed(const char* device_id, const char* command_id,
+                           put_data_fill_callback body_cb);
+
+  // Mark a command as rejected
+  int markCommandRejected(const char* device_id, const char* command_id,
+                          put_data_fill_callback body_cb);
+
   // WARNING: The functions below this line are not considered APIs, they
   // are made public only to ensure callback functions can call them. Make
   // sure you know what you are doing before calling them.

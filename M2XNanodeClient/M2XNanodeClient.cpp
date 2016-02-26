@@ -26,6 +26,8 @@ M2XNanodeClient::M2XNanodeClient(const char* key,
 static M2XNanodeClient* s_client;
 static const char* s_device_id;
 static const char* s_stream_name;
+static const char* s_command_id;
+static const char* s_command_action;
 static put_data_fill_callback s_put_cb;
 static int s_fd;
 static int s_response_code;
@@ -159,6 +161,12 @@ static void print_delete_values(Print* print, delete_values_timestamp_fill_callb
   print->print(F("}"));
 }
 
+static void print_command_body(Print* print, put_data_fill_callback body_cb) {
+  if (body_cb) {
+    body_cb(print);
+  }
+}
+
 static uint16_t post_client_internal_datafill_cb(uint8_t fd) {
   BufferFiller bfill = EtherCard::tcpOffset();
   NullPrint null_print;
@@ -257,6 +265,28 @@ static uint16_t delete_client_internal_datafill_cb(uint8_t fd) {
     s_client->writeHttpHeader(&bfill, null_print.count);
 
     print_delete_values(&bfill, s_delete_cb);
+  }
+  return bfill.position();
+}
+
+static uint16_t post_command_internal_datafill_cb(uint8_t fd) {
+  BufferFiller bfill = EtherCard::tcpOffset();
+  NullPrint null_print;
+
+  if (fd == s_fd) {
+    bfill.print(F("POST /v2/devices/"));
+    print_encoded_string(&bfill, s_device_id);
+    bfill.print(F("/commands/"));
+    print_encoded_string(&bfill, s_command_id);
+    bfill.print(F("/"));
+    bfill.print(s_command_action);
+    bfill.println(F(" HTTP/1.0"));
+
+    null_print.count = 0;
+    print_command_body(&null_print, s_put_cb);
+    s_client->writeHttpHeader(&bfill, null_print.count);
+
+    print_command_body(&bfill, s_put_cb);
   }
   return bfill.position();
 }
@@ -388,6 +418,46 @@ int M2XNanodeClient::deleteValues(const char* device_id, const char* stream_name
   s_response_code = 0;
   s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
                             delete_client_internal_datafill_cb,
+                            _port);
+  return loop();
+}
+
+int M2XNanodeClient::markCommandProcessed(const char* device_id,
+                                          const char* command_id,
+                                          put_data_fill_callback body_cb) {
+  int i;
+  ether.packetLoop(ether.packetReceive());
+  for (i = 0; i < 4; i++) {
+    ether.hisip[i] = (*_addr)[i];
+  }
+  s_client = this;
+  s_device_id = device_id;
+  s_command_id = command_id;
+  s_command_action = "process";
+  s_put_cb = body_cb;
+  s_response_code = 0;
+  s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
+                            post_command_internal_datafill_cb,
+                            _port);
+  return loop();
+}
+
+int M2XNanodeClient::markCommandRejected(const char* device_id,
+                                         const char* command_id,
+                                         put_data_fill_callback body_cb) {
+  int i;
+  ether.packetLoop(ether.packetReceive());
+  for (i = 0; i < 4; i++) {
+    ether.hisip[i] = (*_addr)[i];
+  }
+  s_client = this;
+  s_device_id = device_id;
+  s_command_id = command_id;
+  s_command_action = "reject";
+  s_put_cb = body_cb;
+  s_response_code = 0;
+  s_fd = ether.clientTcpReq(client_internal_fetch_response_code_cb,
+                            post_command_internal_datafill_cb,
                             _port);
   return loop();
 }
