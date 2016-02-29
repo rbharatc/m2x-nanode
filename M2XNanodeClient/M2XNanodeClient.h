@@ -17,6 +17,7 @@ const int E_DISCONNECTED = -1;
 const int E_INVALID = -2;
 const int E_TIMEOUT = -3;
 const int E_NOMATCH = -4;
+const int E_BUFFER_TOO_SMALL = -5;
 
 typedef void (*put_data_fill_callback)(Print* print);
 typedef void (*post_data_fill_callback)(Print* print, int index);
@@ -115,6 +116,41 @@ public:
   int markCommandRejected(const char* device_id, const char* command_id,
                           put_data_fill_callback body_cb);
 
+  // Fetches current timestamp in seconds from M2X server. Since we
+  // are using signed 32-bit integer as return value, this will only
+  // return valid results before 03:14:07 UTC on 19 January 2038. If
+  // the device is supposed to work after that, this function should
+  // not be used.
+  //
+  // The returned value will contain the status code(positive values)
+  // or the error code(negative values).
+  // In case of success, the current timestamp will be filled in the
+  // +ts+ pointer passed in as argument.
+  //
+  // NOTE: although returning uint32_t can give us a larger space,
+  // we prefer to cope with the unix convention here.
+  int getTimestampSeconds(int32_t* ts);
+
+  // Fetches current timestamp in designated format, and returns using the
+  // provided buffer.
+  // Possible values for +type+ include:
+  // 1 - seconds
+  // 2 - millis
+  // any other value - ISO8601
+  //
+  // Notice +bufferLength+ is supposed to contain the length of the
+  // buffer when calling this function. It is also the caller's
+  // responsibility to ensure the buffer is big enough, otherwise
+  // the library will return an error indicating the buffer is too
+  // small.
+  // While this is not accurate all the time, one trick here is to
+  // pass in 0 as the bufferLength, in which case we will always return
+  // the buffer-too-small error. However, the correct buffer length
+  // can be found this way so a secound execution is most likely to work.
+  // However, in most (if not all) cases, a buffer of 30 should be more than
+  // enough.
+  int getTimestamp(char* buffer, int* bufferLength, int type = 2);
+
   // WARNING: The functions below this line are not considered APIs, they
   // are made public only to ensure callback functions can call them. Make
   // sure you know what you are doing before calling them.
@@ -125,6 +161,14 @@ public:
   // Parses and returns the HTTP status code, note this function will
   // return immediately once it gets the status code
   int readStatusCode(const char* origin, int len);
+
+  // Parses and returns the HTTP content length, note this function will
+  // return immediately once it gets the content length
+  int readContentLength(const char* origin, int len);
+
+  // Parses and returns then length for the whole HTTP header section
+  int skipHttpHeader(const char* origin, int len);
+
 private:
   const char* _key;
   int _timeout_seconds;

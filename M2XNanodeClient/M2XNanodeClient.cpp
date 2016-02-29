@@ -28,9 +28,12 @@ static const char* s_device_id;
 static const char* s_stream_name;
 static const char* s_command_id;
 static const char* s_command_action;
+static int s_timestamp_type;
 static put_data_fill_callback s_put_cb;
 static int s_fd;
 static int s_response_code;
+static char* s_response_buffer;
+static int* s_response_buffer_length;
 
 static int s_number;
 static post_data_fill_callback s_post_timestamp_cb;
@@ -291,10 +294,73 @@ static uint16_t post_command_internal_datafill_cb(uint8_t fd) {
   return bfill.position();
 }
 
+static uint16_t get_timestamp_internal_datafill_cb(uint8_t fd) {
+  BufferFiller bfill = EtherCard::tcpOffset();
+  NullPrint null_print;
+
+  if (fd == s_fd) {
+    bfill.print(F("GET /v2/time/"));
+    switch (s_timestamp_type) {
+      case 1:
+        bfill.print(F("seconds"));
+        break;
+      case 2:
+        bfill.print(F("millis"));
+        break;
+      default:
+        bfill.print(F("iso8601"));
+        break;
+    }
+    bfill.println(F(" HTTP/1.0"));
+    s_client->writeHttpHeader(&bfill, 0);
+  }
+  return bfill.position();
+}
+
 static uint8_t client_internal_fetch_response_code_cb(uint8_t fd, uint8_t statuscode, uint16_t datapos, uint16_t len_of_data) {
   if (fd == s_fd) {
     if (statuscode == 0) {
       s_response_code = s_client->readStatusCode((char*) ether.buffer + datapos, len_of_data);
+    } else {
+      s_response_code = statuscode;
+    }
+  }
+}
+
+static int fill_buffer_with_body(const char* data, int length) {
+  int content_length, offset, i;
+  content_length = s_client->readContentLength(data, length);
+  if (content_length > 0) {
+    if (*s_response_buffer_length < content_length) {
+      *s_response_buffer_length = content_length;
+      return E_BUFFER_TOO_SMALL;
+    }
+    offset = s_client->skipHttpHeader(data, length);
+    if (offset < 0) { return E_INVALID; }
+    for (i = 0; i < content_length; i++) {
+      s_response_buffer[i] = data[offset + i];
+    }
+    *s_response_buffer_length = content_length;
+    return 0;
+  } else {
+    return E_INVALID;
+  }
+}
+
+static uint8_t client_internal_fetch_code_and_body_cb(uint8_t fd, uint8_t statuscode, uint16_t datapos, uint16_t len_of_data) {
+  char* origin;
+  int ret;
+
+  if (fd == s_fd) {
+    if (statuscode == 0) {
+      origin = (char*) ether.buffer + datapos;
+      s_response_code = s_client->readStatusCode(origin, len_of_data);
+      if (s_response_code == 200) {
+        ret = fill_buffer_with_body(origin, len_of_data);
+        if (ret < 0) {
+          s_response_code = ret;
+        }
+      }
     } else {
       s_response_code = statuscode;
     }
@@ -462,6 +528,40 @@ int M2XNanodeClient::markCommandRejected(const char* device_id,
   return loop();
 }
 
+int M2XNanodeClient::getTimestamp(char* buffer, int* bufferLength, int type) {
+  int i;
+  ether.packetLoop(ether.packetReceive());
+  for (i = 0; i < 4; i++) {
+    ether.hisip[i] = (*_addr)[i];
+  }
+  s_client = this;
+  s_timestamp_type = type;
+  s_response_code = 0;
+  s_response_buffer = buffer;
+  s_response_buffer_length = bufferLength;
+  s_fd = ether.clientTcpReq(client_internal_fetch_code_and_body_cb,
+                            get_timestamp_internal_datafill_cb,
+                            _port);
+  return loop();
+}
+
+int M2XNanodeClient::getTimestampSeconds(int32_t* ts) {
+  // The maximum value of signed 64-bit integer is 0x7fffffffffffffff,
+  // which is 9223372036854775807. It consists of 19 characters, so a
+  // buffer of 20 is definitely enough here
+  int length = 20;
+  char buffer[20];
+  int status = getTimestamp(buffer, &length, 1);
+  if (status == 200) {
+    int32_t result = 0;
+    for (int i = 0; i < length; i++) {
+      result = result * 10 + (buffer[i] - '0');
+    }
+    if (ts != NULL) { *ts = result; }
+  }
+  return status;
+}
+
 // Encodes and prints string using Percent-encoding specified
 // in RFC 1738, Section 2.2
 int print_encoded_string(Print* print, const char* str) {
@@ -534,6 +634,34 @@ int M2XNanodeClient::readStatusCode(const char* origin, int len) {
     responseCode = responseCode * 10 + (origin[ret + i] - '0');
   }
   return responseCode;
+}
+
+int M2XNanodeClient::readContentLength(const char* origin, int len) {
+  int length, i, ret;
+  char c;
+
+  ret = waitForString(origin, len, "Content-Length: ");
+  if (ret < 0) {
+    return ret;
+  }
+
+  length = 0;
+  i = 0;
+  while (i + ret < len) {
+    c = origin[ret + i];
+    i++;
+
+    if ((c == '\r') || (c == '\n')) {
+      return (length == 0) ? (E_INVALID) : (length);
+    } else {
+      length = length * 10 + (c - '0');
+    }
+  }
+  return E_INVALID;
+}
+
+int M2XNanodeClient::skipHttpHeader(const char* origin, int len) {
+  return waitForString(origin, len, "\n\r\n");
 }
 
 int M2XNanodeClient::loop() {
